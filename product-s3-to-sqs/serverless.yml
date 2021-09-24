@@ -1,0 +1,40 @@
+service: products-api-s3-sqs
+
+custom:
+  productBucket: product-bucket-logica
+
+provider:
+  name: aws
+  runtime: java11
+  stage: dev
+  region: 'us-east-2'
+  iamRoleStatements:
+    - Effect: Allow
+      Action: "s3:GetObject"
+      Resource: "arn:aws:s3:::${self:custom.productBucket}/*"
+    - Effect: Allow
+      Action: "sqs:*"
+      Resource:
+        Fn::GetAtt: [ S3Queue, Arn ]
+  environment:
+    QUEUE_URL: { Ref: S3Queue }
+
+package:
+  artifact: 'target/product-s3-to-sqs-1.0-SNAPSHOT.jar'
+
+functions:
+  product-s3-to-sqs:
+    handler: com.products.lambda.handler.ProductHandler
+    events:
+      - s3:
+          bucket: ${self:custom.productBucket}
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .json
+
+resources:
+  Resources:
+    S3Queue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "ProductS3Queue"

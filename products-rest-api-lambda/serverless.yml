@@ -1,0 +1,65 @@
+service: products-api
+
+provider:
+  name: aws
+  runtime: java11
+  stage: dev
+  region: 'us-east-2'
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource:
+        - { "Fn::GetAtt": ["ProductsDynamoDBTable", "Arn" ] }
+  environment:
+    PRODUCTS_TABLE_NAME: products_table
+
+package:
+  artifact: 'target/products-rest-api-lambda-1.0-SNAPSHOT.jar'
+
+functions:
+  listProducts:
+    handler: com.products.lambda.handler.ListProductsHandler
+    events:
+      - http:
+          path: /products
+          method: get
+  getProduct:
+    handler: com.products.lambda.handler.GetProductHandler
+    events:
+      - http:
+          path: /products/{id}
+          method: get
+  createProduct:
+    handler: com.products.lambda.handler.CreateProductHandler
+    events:
+      - http:
+          path: /products
+          method: post
+  deleteProduct:
+    handler: com.products.lambda.handler.DeleteProductHandler
+    events:
+      - http:
+          path: /products/{id}
+          method: delete
+
+resources:
+  Resources:
+    ProductsDynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: products_table
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
